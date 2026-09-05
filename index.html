@@ -31,7 +31,93 @@ function headers(){return{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_K
 async function api(path,opt={}){let r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{...opt,headers:{...headers(),...(opt.headers||{})}}),t=await r.text();if(!r.ok)throw Error(t||'HTTP '+r.status);return t?JSON.parse(t):null}
 async function loadData(){if(!configured()){dbStatus.innerHTML='⚠️ Chưa cấu hình Supabase.';render();return}try{let rows=await api('warehouse_items?select=*&order=created_at.desc');Object.keys(data).forEach(k=>delete data[k]);rows.forEach(r=>(data[r.code]??=[]).push({id:r.id,pos:r.position,qty:r.quantity}));dbStatus.innerHTML='🟢 <b>Đã kết nối database online</b>';render()}catch(e){dbStatus.innerHTML='🔴 Lỗi kết nối: '+esc(e.message);render()}}
 async function saveItem(){let code=document.getElementById('code').value.trim();if(!code)return alert('Nhập mã hàng trước nhé bro!');let pos=`${rack.value}-${level.value}-${String(slot.value).padStart(2,'0')}`,qty=document.getElementById('qty').value?Number(document.getElementById('qty').value):null;if(!configured())return alert('Chưa cấu hình Supabase.');try{await api('warehouse_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({code,position:pos,quantity:qty})});document.getElementById('code').value='';document.getElementById('qty').value='';await loadData();alert(`Đã lưu ${code} → ${pos}`)}catch(e){alert('Lưu thất bại: '+e.message)}}
-function searchItem(){let q=document.getElementById('search').value.trim().toLowerCase(),b=document.getElementById('results');if(!q){b.className='empty';b.innerHTML='Nhập mã hàng để tìm vị trí';return}let keys=Object.keys(data).filter(k=>k.toLowerCase().includes(q));if(!keys.length){b.className='empty';b.innerHTML='Không tìm thấy mã hàng';return}b.className='result';b.innerHTML=keys.map(k=>`<b>${esc(k)}</b><br>`+data[k].map(x=>`📍 <b>${x.pos}</b>${x.qty!=null?' — '+x.qty+' cái':''}`).join('<br>')).join('<hr>')}
+function normalizeCode(s){
+    return String(s)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g,'');
+}
+
+function levenshtein(a,b){
+    let m=a.length,n=b.length;
+    let dp=Array.from({length:m+1},()=>Array(n+1).fill(0));
+
+    for(let i=0;i<=m;i++)dp[i][0]=i;
+    for(let j=0;j<=n;j++)dp[0][j]=j;
+
+    for(let i=1;i<=m;i++){
+        for(let j=1;j<=n;j++){
+            dp[i][j]=a[i-1]===b[j-1]
+                ?dp[i-1][j-1]
+                :Math.min(
+                    dp[i-1][j-1]+1,
+                    dp[i-1][j]+1,
+                    dp[i][j-1]+1
+                );
+        }
+    }
+
+    return dp[m][n];
+}
+
+function searchItem(){
+    let q=document.getElementById('search').value.trim();
+    let b=document.getElementById('results');
+
+    if(!q){
+        b.className='empty';
+        b.innerHTML='Nhập mã hàng để tìm vị trí';
+        return;
+    }
+
+    let nq=normalizeCode(q);
+
+    let matches=Object.keys(data)
+        .map(k=>{
+            let nk=normalizeCode(k);
+            let score=999;
+
+            if(nk===nq){
+                score=0;
+            }else if(nk.includes(nq)){
+                score=1;
+            }else if(nq.includes(nk)){
+                score=2;
+            }else{
+                score=levenshtein(nk,nq);
+            }
+
+            return {key:k,score};
+        })
+        .filter(x=>{
+            let len=normalizeCode(x.key).length;
+
+            // Cho phép sai tối đa:
+            // mã ngắn: 1 ký tự
+            // mã dài: 2 ký tự
+            let maxError=len>=6?2:1;
+
+            return x.score<=maxError;
+        })
+        .sort((a,b)=>a.score-b.score);
+
+    if(!matches.length){
+        b.className='empty';
+        b.innerHTML='Không tìm thấy mã hàng phù hợp';
+        return;
+    }
+
+    b.className='result';
+
+    b.innerHTML=matches.map(x=>{
+        let k=x.key;
+
+        return `<b>${esc(k)}</b><br>`+
+            data[k].map(item=>
+                `📍 <b>${esc(item.pos)}</b>`+
+                `${item.qty!=null?' — '+item.qty+' cái':''}`
+            ).join('<br>');
+    }).join('<hr>');
+}
 function render(){let rows=Object.entries(data).flatMap(([c,a])=>a.map(x=>`<tr><td>${esc(c)}</td><td><b>${x.pos}</b></td><td>${x.qty??''}</td><td><button onclick="removeItem('${x.id}')">Xóa</button></td></tr>`));count.textContent=`${rows.length} vị trí đã lưu`;table.innerHTML=rows.length?`<table><tr><th>Mã hàng</th><th>Vị trí</th><th>SL</th><th></th></tr>${rows.join('')}</table>`:'<div class="empty">Chưa có dữ liệu</div>'}
 async function removeItem(id){if(!confirm('Xóa vị trí này?'))return;try{await api('warehouse_items?id=eq.'+encodeURIComponent(id),{method:'DELETE'});await loadData();searchItem()}catch(e){alert('Xóa thất bại: '+e.message)}}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
