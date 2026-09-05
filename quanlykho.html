@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý vị trí kho</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:white;padding:18px 20px}header h1{margin:0;font-size:22px}
+main{max-width:900px;margin:auto;padding:18px}.card{background:white;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #00000010}
+label{font-weight:700;display:block;margin:10px 0 6px}input,select,button{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;font-size:16px}
+button{background:#111827;color:white;border:0;font-weight:700;cursor:pointer;margin-top:12px}button.danger{background:#b91c1c}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.result{font-size:18px;padding:14px;background:#f0fdf4;border-radius:10px;margin-top:12px}
+table{width:100%;border-collapse:collapse;margin-top:10px}th,td{text-align:left;padding:10px;border-bottom:1px solid #eee}th{background:#f8fafc}
+.small{color:#64748b;font-size:13px}.empty{text-align:center;color:#64748b;padding:20px}
+@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}table{font-size:13px}}
+</style>
+</head>
+<body>
+<header><h1>📦 Quản lý vị trí hàng trong kho</h1></header>
+<main>
+<div class="card">
+<h2>🔎 Tìm hàng</h2>
+<input id="search" placeholder="Nhập mã hàng..." oninput="searchItem()">
+<div id="results" class="empty">Nhập mã hàng để tìm vị trí</div>
+</div>
+
+<div class="card">
+<h2>➕ Ghi vị trí hàng</h2>
+<label>Mã hàng</label><input id="code" placeholder="VD: SP-001">
+<div class="grid">
+<div><label>Kệ</label><select id="rack"></select></div>
+<div><label>Tầng</label><select id="level"></select></div>
+<div><label>Slot</label><select id="slot"></select></div>
+</div>
+<label>Số lượng (tùy chọn)</label><input id="qty" type="number" min="0" placeholder="VD: 20">
+<button onclick="saveItem()">💾 Lưu vị trí</button>
+</div>
+
+<div class="card">
+<h2>📋 Dữ liệu đã lưu</h2>
+<div id="count" class="small"></div>
+<div id="table"></div>
+<button class="danger" onclick="clearAll()">Xóa toàn bộ dữ liệu</button>
+</div>
+</main>
+<script>
+const racks=['A','B','C','D','F','G','H','J','K'];
+const data=JSON.parse(localStorage.getItem('warehouseData')||'{}');
+const rack=document.getElementById('rack'), level=document.getElementById('level'), slot=document.getElementById('slot');
+racks.forEach(x=>rack.add(new Option(x,x)));
+for(let i=1;i<=4;i++)level.add(new Option(i,i));
+for(let i=1;i<=26;i++)slot.add(new Option(String(i).padStart(2,'0'),i));
+function saveItem(){
+ const code=document.getElementById('code').value.trim();
+ if(!code)return alert('Nhập mã hàng trước nhé bro!');
+ const pos=`${rack.value}-${level.value}-${String(slot.value).padStart(2,'0')}`;
+ const qty=document.getElementById('qty').value;
+ if(!data[code])data[code]=[];
+ const existing=data[code].find(x=>x.pos===pos);
+ if(existing)existing.qty=qty;
+ else data[code].push({pos,qty});
+ localStorage.setItem('warehouseData',JSON.stringify(data));
+ document.getElementById('code').value='';document.getElementById('qty').value='';
+ render();alert(`Đã lưu ${code} → ${pos}`);
+}
+function searchItem(){
+ const q=document.getElementById('search').value.trim().toLowerCase(), box=document.getElementById('results');
+ if(!q){box.className='empty';box.innerHTML='Nhập mã hàng để tìm vị trí';return}
+ const keys=Object.keys(data).filter(k=>k.toLowerCase().includes(q));
+ if(!keys.length){box.className='empty';box.innerHTML='Không tìm thấy mã hàng';return}
+ box.className='result';box.innerHTML=keys.map(k=>`<b>${esc(k)}</b><br>${data[k].map(x=>`📍 <b>${x.pos}</b>${x.qty?` — ${x.qty} cái`:''}`).join('<br>')}`).join('<hr>');
+}
+function render(){
+ const rows=Object.entries(data).flatMap(([code,arr])=>arr.map((x,i)=>`<tr><td>${esc(code)}</td><td><b>${x.pos}</b></td><td>${x.qty||''}</td><td><button onclick="removeItem('${encodeURIComponent(code)}',${i})">Xóa</button></td></tr>`));
+ document.getElementById('count').textContent=`${rows.length} vị trí đã lưu`;
+ document.getElementById('table').innerHTML=rows.length?`<table><tr><th>Mã hàng</th><th>Vị trí</th><th>SL</th><th></th></tr>${rows.join('')}</table>`:'<div class="empty">Chưa có dữ liệu</div>';
+}
+function removeItem(c,i){c=decodeURIComponent(c);data[c].splice(i,1);if(!data[c].length)delete data[c];localStorage.setItem('warehouseData',JSON.stringify(data));render();searchItem()}
+function clearAll(){if(confirm('Xóa toàn bộ dữ liệu?')){localStorage.removeItem('warehouseData');location.reload()}}
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+render();
+</script>
+</body></html>
