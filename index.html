@@ -233,13 +233,14 @@ placeholder="VD: NVL-005"
 </div>
 
 
-<label>Số lượng (tùy chọn)</label>
+<label>⚖️ Số lượng (kg)</label>
 
 <input
 id="qty"
 type="number"
+step="0.01"
 min="0"
-placeholder="VD: 20"
+placeholder="VD: 20.5"
 >
 
 
@@ -872,7 +873,7 @@ function searchItem(){
                     ){
 
                         html+=
-                            ` — ${item.qty} cái`;
+                            ` — ${item.qty} kg`;
 
                     }
 
@@ -949,7 +950,7 @@ function render(){
                     </td>
 
                     <td>
-                        ${item.qty ?? ''}
+                        ${item.qty != null ? item.qty + ' kg' : ''}
                     </td>
 
                     <td>
@@ -1004,7 +1005,7 @@ function render(){
 
                 <th>Vị trí</th>
 
-                <th>SL</th>
+                <th>SL (kg)</th>
 
                 <th>📦 Bao</th>
 
