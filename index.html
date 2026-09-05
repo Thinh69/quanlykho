@@ -1,125 +1,1171 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Quản lý vị trí kho</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
-header{background:#111827;color:#fff;padding:18px 20px}header h1{margin:0;font-size:22px}
-main{max-width:950px;margin:auto;padding:18px}.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
-label{font-weight:700;display:block;margin:10px 0 6px}input,select,button{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px;font-size:16px}
-button{background:#111827;color:#fff;border:0;font-weight:700;cursor:pointer;margin-top:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.result{font-size:18px;padding:14px;background:#f0fdf4;border-radius:10px;margin-top:12px}.status{padding:10px;border-radius:9px;background:#f8fafc;margin-top:10px}.small{color:#64748b;font-size:13px}
-table{width:100%;border-collapse:collapse;margin-top:10px}th,td{text-align:left;padding:10px;border-bottom:1px solid #eee}th{background:#f8fafc}.empty{text-align:center;color:#64748b;padding:20px}
-@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}table{font-size:13px}}
-</style></head><body>
-<header><h1>📦 Quản lý vị trí hàng trong kho</h1></header><main>
-<div class="card"><h2>☁️ Database online</h2><div class="status" id="dbStatus">Đang kiểm tra...</div>
-<div class="small">Sau khi cấu hình Supabase, mọi điện thoại/máy tính sẽ dùng chung dữ liệu.</div></div>
-<div class="card"><h2>🔎 Tìm hàng</h2><input id="search" placeholder="Nhập mã hàng..." oninput="searchItem()">
-<div id="results" class="empty">Nhập mã hàng để tìm vị trí</div></div>
-<div class="card"><h2>➕ Ghi vị trí hàng</h2><label>Mã hàng</label><input id="code" placeholder="VD: SP-001">
-<div class="grid"><div><label>Kệ</label><select id="rack"></select></div><div><label>Tầng</label><select id="level"></select></div><div><label>Slot</label><select id="slot"></select></div></div>
-<label>Số lượng (tùy chọn)</label><input id="qty" type="number" min="0" placeholder="VD: 20"><button onclick="saveItem()">💾 Lưu lên database</button></div>
-<div class="card"><h2>📋 Hàng đã lưu</h2><div id="count" class="small"></div><div id="table"></div></div>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f4f6f8;
+    color:#17202a;
+}
+
+header{
+    background:#111827;
+    color:#fff;
+    padding:18px 20px;
+}
+
+header h1{
+    margin:0;
+    font-size:22px;
+}
+
+main{
+    max-width:950px;
+    margin:auto;
+    padding:18px;
+}
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:0 2px 10px #0001;
+}
+
+label{
+    font-weight:700;
+    display:block;
+    margin:10px 0 6px;
+}
+
+input,
+select,
+button{
+    width:100%;
+    padding:12px;
+    border:1px solid #d1d5db;
+    border-radius:9px;
+    font-size:16px;
+}
+
+button{
+    background:#111827;
+    color:#fff;
+    border:0;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:12px;
+}
+
+button:hover{
+    opacity:.9;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.result{
+    font-size:18px;
+    padding:14px;
+    background:#f0fdf4;
+    border-radius:10px;
+    margin-top:12px;
+}
+
+.status{
+    padding:10px;
+    border-radius:9px;
+    background:#f8fafc;
+    margin-top:10px;
+}
+
+.small{
+    color:#64748b;
+    font-size:13px;
+}
+
+.note{
+    color:#475569;
+    font-size:14px;
+    margin-top:5px;
+}
+
+.location{
+    margin-bottom:8px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,
+td{
+    text-align:left;
+    padding:10px;
+    border-bottom:1px solid #eee;
+}
+
+th{
+    background:#f8fafc;
+}
+
+.empty{
+    text-align:center;
+    color:#64748b;
+    padding:20px;
+}
+
+hr{
+    border:0;
+    border-top:1px solid #ddd;
+    margin:15px 0;
+}
+
+.delete-btn{
+    background:#dc2626;
+    margin-top:0;
+}
+
+@media(max-width:600px){
+
+    .grid{
+        grid-template-columns:1fr 1fr;
+    }
+
+    table{
+        font-size:13px;
+        display:block;
+        overflow-x:auto;
+    }
+
+    th,
+    td{
+        padding:8px;
+        white-space:nowrap;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <h1>📦 Quản lý vị trí hàng trong kho</h1>
+</header>
+
+<main>
+
+<!-- DATABASE -->
+<div class="card">
+
+    <h2>☁️ Database online</h2>
+
+    <div class="status" id="dbStatus">
+        Đang kiểm tra...
+    </div>
+
+    <div class="small">
+        Mọi điện thoại/máy tính sẽ dùng chung dữ liệu.
+    </div>
+
+</div>
+
+
+<!-- SEARCH -->
+<div class="card">
+
+    <h2>🔎 Tìm hàng</h2>
+
+    <input
+        id="search"
+        placeholder="Nhập mã hàng..."
+        oninput="searchItem()"
+    >
+
+    <div id="results" class="empty">
+        Nhập mã hàng để tìm vị trí
+    </div>
+
+</div>
+
+
+<!-- ADD ITEM -->
+<div class="card">
+
+    <h2>➕ Ghi vị trí hàng</h2>
+
+    <label>Mã hàng</label>
+
+    <input
+        id="code"
+        placeholder="VD: SP-001"
+    >
+
+
+    <div class="grid">
+
+        <div>
+            <label>Kệ</label>
+            <select id="rack"></select>
+        </div>
+
+        <div>
+            <label>Tầng</label>
+            <select id="level"></select>
+        </div>
+
+        <div>
+            <label>Slot</label>
+            <select id="slot"></select>
+        </div>
+
+    </div>
+
+
+    <label>Số lượng (tùy chọn)</label>
+
+    <input
+        id="qty"
+        type="number"
+        min="0"
+        placeholder="VD: 20"
+    >
+
+
+    <label>📦 Còn bao nhiêu bao?</label>
+
+    <input
+        id="bags"
+        type="number"
+        min="0"
+        placeholder="VD: 5"
+    >
+
+
+    <label>📝 Note / Ghi chú</label>
+
+    <input
+        id="note"
+        type="text"
+        placeholder="VD: Hàng lỗi, để riêng..."
+    >
+
+
+    <button onclick="saveItem()">
+        💾 Lưu lên database
+    </button>
+
+</div>
+
+
+<!-- SAVED ITEMS -->
+<div class="card">
+
+    <h2>📋 Hàng đã lưu</h2>
+
+    <div id="count" class="small"></div>
+
+    <div id="table"></div>
+
+</div>
+
 </main>
+
+
 <script>
-const SUPABASE_URL="https://klkfyhwehbwawxqhflix.supabase.co",SUPABASE_KEY="sb_publishable_gh0VwqKsJfAR9uYsS4OFIQ_CXAqUuSg";
-const racks=['A','B','C','D','F','G','H','J','K'],data={};
-const rack=document.getElementById('rack'),level=document.getElementById('level'),slot=document.getElementById('slot');
-racks.forEach(x=>rack.add(new Option(x,x)));for(let i=1;i<=4;i++)level.add(new Option(i,i));for(let i=1;i<=26;i++)slot.add(new Option(String(i).padStart(2,'0'),i));
-function configured(){return SUPABASE_URL.startsWith('https://')&&!SUPABASE_URL.includes('DAN_')&&!SUPABASE_KEY.includes('DAN_')}
-function headers(){return{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'}}
-async function api(path,opt={}){let r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{...opt,headers:{...headers(),...(opt.headers||{})}}),t=await r.text();if(!r.ok)throw Error(t||'HTTP '+r.status);return t?JSON.parse(t):null}
-async function loadData(){if(!configured()){dbStatus.innerHTML='⚠️ Chưa cấu hình Supabase.';render();return}try{let rows=await api('warehouse_items?select=*&order=created_at.desc');Object.keys(data).forEach(k=>delete data[k]);rows.forEach(r=>(data[r.code]??=[]).push({id:r.id,pos:r.position,qty:r.quantity}));dbStatus.innerHTML='🟢 <b>Đã kết nối database online</b>';render()}catch(e){dbStatus.innerHTML='🔴 Lỗi kết nối: '+esc(e.message);render()}}
-async function saveItem(){let code=document.getElementById('code').value.trim();if(!code)return alert('Nhập mã hàng trước nhé bro!');let pos=`${rack.value}-${level.value}-${String(slot.value).padStart(2,'0')}`,qty=document.getElementById('qty').value?Number(document.getElementById('qty').value):null;if(!configured())return alert('Chưa cấu hình Supabase.');try{await api('warehouse_items',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({code,position:pos,quantity:qty})});document.getElementById('code').value='';document.getElementById('qty').value='';await loadData();alert(`Đã lưu ${code} → ${pos}`)}catch(e){alert('Lưu thất bại: '+e.message)}}
-function normalizeCode(s){
-    return String(s)
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g,'');
+
+/* =========================
+   SUPABASE
+========================= */
+
+const SUPABASE_URL =
+"https://klkfyhwehbwawxqhflix.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_gh0VwqKsJfAR9uYsS4OFIQ_CXAqUuSg";
+
+
+/* =========================
+   KỆ / TẦNG / SLOT
+========================= */
+
+const racks = [
+    'A',
+    'B',
+    'C',
+    'D',
+    'F',
+    'G',
+    'H',
+    'J',
+    'K'
+];
+
+const data = {};
+
+const rack =
+    document.getElementById('rack');
+
+const level =
+    document.getElementById('level');
+
+const slot =
+    document.getElementById('slot');
+
+
+racks.forEach(x => {
+
+    rack.add(
+        new Option(x,x)
+    );
+
+});
+
+
+for(let i=1;i<=4;i++){
+
+    level.add(
+        new Option(i,i)
+    );
+
 }
 
-function levenshtein(a,b){
-    let m=a.length,n=b.length;
-    let dp=Array.from({length:m+1},()=>Array(n+1).fill(0));
 
-    for(let i=0;i<=m;i++)dp[i][0]=i;
-    for(let j=0;j<=n;j++)dp[0][j]=j;
+for(let i=1;i<=26;i++){
 
-    for(let i=1;i<=m;i++){
-        for(let j=1;j<=n;j++){
-            dp[i][j]=a[i-1]===b[j-1]
-                ?dp[i-1][j-1]
-                :Math.min(
-                    dp[i-1][j-1]+1,
-                    dp[i-1][j]+1,
-                    dp[i][j-1]+1
-                );
-        }
+    slot.add(
+        new Option(
+            String(i).padStart(2,'0'),
+            i
+        )
+    );
+
+}
+
+
+/* =========================
+   DATABASE
+========================= */
+
+function configured(){
+
+    return (
+        SUPABASE_URL.startsWith('https://') &&
+        !SUPABASE_URL.includes('DAN_') &&
+        !SUPABASE_KEY.includes('DAN_')
+    );
+
+}
+
+
+function headers(){
+
+    return {
+
+        apikey:SUPABASE_KEY,
+
+        Authorization:
+            'Bearer '+SUPABASE_KEY,
+
+        'Content-Type':
+            'application/json'
+
+    };
+
+}
+
+
+async function api(path,opt={}){
+
+    const response =
+        await fetch(
+            SUPABASE_URL +
+            '/rest/v1/' +
+            path,
+            {
+                ...opt,
+
+                headers:{
+                    ...headers(),
+                    ...(opt.headers || {})
+                }
+            }
+        );
+
+
+    const text =
+        await response.text();
+
+
+    if(!response.ok){
+
+        throw Error(
+            text ||
+            'HTTP '+response.status
+        );
+
     }
 
-    return dp[m][n];
+
+    return text
+        ? JSON.parse(text)
+        : null;
+
 }
 
-function searchItem(){
-    let q=document.getElementById('search').value.trim();
-    let b=document.getElementById('results');
 
-    if(!q){
-        b.className='empty';
-        b.innerHTML='Nhập mã hàng để tìm vị trí';
+/* =========================
+   LOAD DATA
+========================= */
+
+async function loadData(){
+
+    if(!configured()){
+
+        dbStatus.innerHTML =
+            '⚠️ Chưa cấu hình Supabase.';
+
+        render();
+
         return;
+
     }
 
-    let nq=normalizeCode(q);
 
-    let matches=Object.keys(data)
-        .map(k=>{
-            let nk=normalizeCode(k);
-            let score=999;
+    try{
 
-            if(nk===nq){
-                score=0;
-            }else if(nk.includes(nq)){
-                score=1;
-            }else if(nq.includes(nk)){
-                score=2;
-            }else{
-                score=levenshtein(nk,nq);
+        const rows =
+            await api(
+                'warehouse_items?select=*&order=created_at.desc'
+            );
+
+
+        Object.keys(data)
+            .forEach(
+                k => delete data[k]
+            );
+
+
+        rows.forEach(r => {
+
+            if(!data[r.code]){
+
+                data[r.code] = [];
+
             }
 
-            return {key:k,score};
-        })
-        .filter(x=>{
-            let len=normalizeCode(x.key).length;
 
-            // Cho phép sai tối đa:
-            // mã ngắn: 1 ký tự
-            // mã dài: 2 ký tự
-            let maxError=len>=6?2:1;
+            data[r.code].push({
 
-            return x.score<=maxError;
-        })
-        .sort((a,b)=>a.score-b.score);
+                id:r.id,
 
-    if(!matches.length){
-        b.className='empty';
-        b.innerHTML='Không tìm thấy mã hàng phù hợp';
-        return;
+                pos:r.position,
+
+                qty:r.quantity,
+
+                bags:r.bags,
+
+                note:r.note
+
+            });
+
+        });
+
+
+        dbStatus.innerHTML =
+            '🟢 <b>Đã kết nối database online</b>';
+
+
+        render();
+
+
+        if(
+            document
+            .getElementById('search')
+            .value
+            .trim()
+        ){
+
+            searchItem();
+
+        }
+
+
+    }catch(e){
+
+        dbStatus.innerHTML =
+            '🔴 Lỗi kết nối: ' +
+            esc(e.message);
+
+        render();
+
     }
 
-    b.className='result';
-
-    b.innerHTML=matches.map(x=>{
-        let k=x.key;
-
-        return `<b>${esc(k)}</b><br>`+
-            data[k].map(item=>
-                `📍 <b>${esc(item.pos)}</b>`+
-                `${item.qty!=null?' — '+item.qty+' cái':''}`
-            ).join('<br>');
-    }).join('<hr>');
 }
-function render(){let rows=Object.entries(data).flatMap(([c,a])=>a.map(x=>`<tr><td>${esc(c)}</td><td><b>${x.pos}</b></td><td>${x.qty??''}</td><td><button onclick="removeItem('${x.id}')">Xóa</button></td></tr>`));count.textContent=`${rows.length} vị trí đã lưu`;table.innerHTML=rows.length?`<table><tr><th>Mã hàng</th><th>Vị trí</th><th>SL</th><th></th></tr>${rows.join('')}</table>`:'<div class="empty">Chưa có dữ liệu</div>'}
-async function removeItem(id){if(!confirm('Xóa vị trí này?'))return;try{await api('warehouse_items?id=eq.'+encodeURIComponent(id),{method:'DELETE'});await loadData();searchItem()}catch(e){alert('Xóa thất bại: '+e.message)}}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+
+/* =========================
+   SAVE ITEM
+========================= */
+
+async function saveItem(){
+
+    const code =
+        document
+        .getElementById('code')
+        .value
+        .trim();
+
+
+    if(!code){
+
+        alert(
+            'Nhập mã hàng trước nhé bro!'
+        );
+
+        return;
+
+    }
+
+
+    const pos =
+        `${rack.value}-${level.value}-${String(slot.value).padStart(2,'0')}`;
+
+
+    const qtyValue =
+        document
+        .getElementById('qty')
+        .value;
+
+
+    const bagsValue =
+        document
+        .getElementById('bags')
+        .value;
+
+
+    const noteValue =
+        document
+        .getElementById('note')
+        .value
+        .trim();
+
+
+    const qty =
+        qtyValue !== ''
+            ? Number(qtyValue)
+            : null;
+
+
+    const bags =
+        bagsValue !== ''
+            ? Number(bagsValue)
+            : null;
+
+
+    const note =
+        noteValue !== ''
+            ? noteValue
+            : null;
+
+
+    if(!configured()){
+
+        alert(
+            'Chưa cấu hình Supabase.'
+        );
+
+        return;
+
+    }
+
+
+    try{
+
+        await api(
+            'warehouse_items',
+            {
+
+                method:'POST',
+
+                headers:{
+                    Prefer:
+                        'return=minimal'
+                },
+
+                body:JSON.stringify({
+
+                    code:code,
+
+                    position:pos,
+
+                    quantity:qty,
+
+                    bags:bags,
+
+                    note:note
+
+                })
+
+            }
+        );
+
+
+        document
+            .getElementById('code')
+            .value='';
+
+
+        document
+            .getElementById('qty')
+            .value='';
+
+
+        document
+            .getElementById('bags')
+            .value='';
+
+
+        document
+            .getElementById('note')
+            .value='';
+
+
+        await loadData();
+
+
+        alert(
+            `Đã lưu ${code} → ${pos}`
+        );
+
+
+    }catch(e){
+
+        alert(
+            'Lưu thất bại: ' +
+            e.message
+        );
+
+    }
+
+}
+
+
+/* =========================
+   NORMALIZE SEARCH
+========================= */
+
+function normalizeCode(s){
+
+    return String(s)
+
+        .toUpperCase()
+
+        .replace(
+            /[^A-Z0-9]/g,
+            ''
+        );
+
+}
+
+
+/* =========================
+   LEVENSHTEIN
+========================= */
+
+function levenshtein(a,b){
+
+    const m = a.length;
+
+    const n = b.length;
+
+
+    const dp =
+        Array.from(
+            {
+                length:m+1
+            },
+            () =>
+                Array(n+1).fill(0)
+        );
+
+
+    for(
+        let i=0;
+        i<=m;
+        i++
+    ){
+
+        dp[i][0] = i;
+
+    }
+
+
+    for(
+        let j=0;
+        j<=n;
+        j++
+    ){
+
+        dp[0][j] = j;
+
+    }
+
+
+    for(
+        let i=1;
+        i<=m;
+        i++
+    ){
+
+        for(
+            let j=1;
+            j<=n;
+            j++
+        ){
+
+            dp[i][j] =
+                a[i-1] === b[j-1]
+
+                ? dp[i-1][j-1]
+
+                : Math.min(
+
+                    dp[i-1][j-1] + 1,
+
+                    dp[i-1][j] + 1,
+
+                    dp[i][j-1] + 1
+
+                );
+
+        }
+
+    }
+
+
+    return dp[m][n];
+
+}
+
+
+/* =========================
+   SEARCH
+========================= */
+
+function searchItem(){
+
+    const q =
+        document
+        .getElementById('search')
+        .value
+        .trim();
+
+
+    const result =
+        document
+        .getElementById('results');
+
+
+    if(!q){
+
+        result.className =
+            'empty';
+
+        result.innerHTML =
+            'Nhập mã hàng để tìm vị trí';
+
+        return;
+
+    }
+
+
+    const nq =
+        normalizeCode(q);
+
+
+    const matches =
+        Object.keys(data)
+
+        .map(k => {
+
+            const nk =
+                normalizeCode(k);
+
+
+            let score = 999;
+
+
+            if(nk === nq){
+
+                score = 0;
+
+            }
+
+            else if(
+                nk.includes(nq)
+            ){
+
+                score = 1;
+
+            }
+
+            else if(
+                nq.includes(nk)
+            ){
+
+                score = 2;
+
+            }
+
+            else{
+
+                score =
+                    levenshtein(
+                        nk,
+                        nq
+                    );
+
+            }
+
+
+            return {
+
+                key:k,
+
+                score:score
+
+            };
+
+        })
+
+
+        .filter(x => {
+
+            const len =
+                normalizeCode(
+                    x.key
+                ).length;
+
+
+            const maxError =
+                len >= 6
+                    ? 2
+                    : 1;
+
+
+            return (
+                x.score <= maxError
+            );
+
+        })
+
+
+        .sort(
+            (a,b) =>
+                a.score -
+                b.score
+        );
+
+
+    if(!matches.length){
+
+        result.className =
+            'empty';
+
+        result.innerHTML =
+            'Không tìm thấy mã hàng phù hợp';
+
+        return;
+
+    }
+
+
+    result.className =
+        'result';
+
+
+    result.innerHTML =
+        matches
+
+        .map(x => {
+
+            const code =
+                x.key;
+
+
+            const locations =
+                data[code]
+
+                .map(item => {
+
+                    let html =
+                        `<div class="location">
+                            📍 <b>${esc(item.pos)}</b>`;
+
+
+
+                    if(item.qty !== null &&
+                       item.qty !== undefined){
+
+                        html +=
+                            ` — ${item.qty} cái`;
+
+                    }
+
+
+                    if(item.bags !== null &&
+                       item.bags !== undefined){
+
+                        html +=
+                            ` — 📦 ${item.bags} bao`;
+
+                    }
+
+
+                    html += '</div>';
+
+
+                    if(item.note){
+
+                        html +=
+                            `<div class="note">
+                                📝 ${esc(item.note)}
+                            </div>`;
+
+                    }
+
+
+                    return html;
+
+                })
+
+                .join('<br>');
+
+
+            return `
+                <div>
+                    <b>${esc(code)}</b>
+                    <br>
+                    ${locations}
+                </div>
+            `;
+
+        })
+
+        .join('<hr>');
+
+}
+
+
+/* =========================
+   RENDER TABLE
+========================= */
+
+function render(){
+
+    const rows =
+        Object.entries(data)
+
+        .flatMap(
+            ([code,items]) =>
+
+            items.map(item => `
+
+                <tr>
+
+                    <td>
+                        ${esc(code)}
+                    </td>
+
+                    <td>
+                        <b>
+                            ${esc(item.pos)}
+                        </b>
+                    </td>
+
+                    <td>
+                        ${item.qty ?? ''}
+                    </td>
+
+                    <td>
+                        ${item.bags ?? ''}
+                    </td>
+
+                    <td>
+                        ${
+                            item.note
+                            ? esc(item.note)
+                            : ''
+                        }
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="delete-btn"
+                            onclick="removeItem('${item.id}')"
+                        >
+                            Xóa
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            `)
+
+        );
+
+
+    document
+        .getElementById('count')
+        .textContent =
+            `${rows.length} vị trí đã lưu`;
+
+
+    document
+        .getElementById('table')
+        .innerHTML =
+
+        rows.length
+
+        ?
+
+        `
+        <table>
+
+            <tr>
+
+                <th>Mã hàng</th>
+
+                <th>Vị trí</th>
+
+                <th>SL</th>
+
+                <th>📦 Bao</th>
+
+                <th>📝 Note</th>
+
+                <th></th>
+
+            </tr>
+
+            ${rows.join('')}
+
+        </table>
+        `
+
+        :
+
+        `
+        <div class="empty">
+            Chưa có dữ liệu
+        </div>
+        `;
+
+}
+
+
+/* =========================
+   DELETE
+========================= */
+
+async function removeItem(id){
+
+    if(
+        !confirm(
+            'Xóa vị trí này?'
+        )
+    ){
+
+        return;
+
+    }
+
+
+    try{
+
+        await api(
+
+            'warehouse_items?id=eq.' +
+            encodeURIComponent(id),
+
+            {
+                method:'DELETE'
+            }
+
+        );
+
+
+        await loadData();
+
+
+        searchItem();
+
+
+    }catch(e){
+
+        alert(
+            'Xóa thất bại: ' +
+            e.message
+        );
+
+    }
+
+}
+
+
+/* =========================
+   ESCAPE HTML
+========================= */
+
+function esc(s){
+
+    return String(s)
+
+        .replace(
+            /[&<>"']/g,
+
+            m => ({
+
+                '&':'&amp;',
+                '<':'&lt;',
+                '>':'&gt;',
+                '"':'&quot;',
+                "'":'&#039;'
+
+            }[m])
+
+        );
+
+}
+
+
+/* =========================
+   START
+========================= */
+
 loadData();
-</script></body></html>
+
+</script>
+
+</body>
+</html>
